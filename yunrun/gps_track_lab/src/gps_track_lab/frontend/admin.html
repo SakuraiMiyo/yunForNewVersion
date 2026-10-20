@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>云运动 · 工作空间</title>
+<!-- STUDIO_STYLE -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%2711%27 fill=%27%231e392e%27/%3E%3Cpath d=%27M22 6 11 23h9l-2 11 12-18h-9z%27 fill=%27%23d8ed92%27/%3E%3C/svg%3E">
+</head>
+<body class="admin-page">
+<a class="skip-link" href="#main">跳到主要内容</a>
+<aside class="sidebar" aria-label="主导航">
+  <a class="brand" href="/admin"><svg class="brand-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="5" y="2" width="30" height="36" rx="15" stroke="currentColor" stroke-width="2" transform="rotate(30 20 20)"/><path d="m17 10-5 13h9l-3 8 11-15h-9l3-6" fill="currentColor"/></svg><span><strong>云运动</strong><small>YUNRUN STUDIO</small></span></a>
+  <nav class="rail" id="nav" aria-label="工作区与配置"></nav>
+  <div class="sidebar-foot"><span data-icon="leaf"></span><div><strong>你的本地运动工作室</strong>LOCAL WORKSPACE · WEB PREVIEW</div></div>
+</aside>
+<header class="topbar">
+  <button class="icon-btn mobile-menu" id="menu-btn" aria-label="打开导航菜单" aria-expanded="false" aria-controls="nav" data-icon="menu"></button>
+  <div class="breadcrumbs"><span>工作空间</span><span>/</span><strong id="page-crumb">总览</strong></div>
+  <div class="spacer"></div><div class="status-group"><span class="local-state">本地工作空间</span>
+  <span class="pill" id="top-progress">读取配置进度…</span></div>
+  <button class="icon-btn" id="theme-btn" title="切换浅色 / 深色" aria-label="切换浅色与深色主题" data-icon="moon"></button>
+</header>
+<div class="layout">
+  <main id="main" tabindex="-1">
+
+
+    <section class="panel" id="panel-overview" aria-label="工作空间总览">
+      <div class="page-header"><div><div class="eyebrow">YOUR PERSONAL RUNNING STUDIO</div><h1>工作空间</h1></div><a href="/" class="quiet-link" target="_blank" rel="noopener">打开轨迹实验室 <span data-icon="arrow"></span></a></div>
+      <div class="hero"><div><div class="eyebrow">A LITTLE PREPARATION. A BETTER START.</div><h2>准备好，<br><em>再向前一步。</em></h2><p>从操场标定到轨迹预览，把每一步安排妥当。<br>你的配置、数据与进度，都在这里。</p><div class="hero-actions"><button class="primary" id="continue-setup" data-goto="config">开始配置 →</button><button class="quiet-action" data-goto="run">进入跑步工作台 ↗</button></div></div>
+      <svg class="track-art" viewBox="0 0 540 300" fill="none" aria-hidden="true">
+        <g transform="translate(270 128) rotate(-26) scale(.86)"><rect class="track-line" x="-160" y="-85" width="320" height="170" rx="85"/><rect class="track-line" x="-149" y="-74" width="298" height="148" rx="74"/><rect class="track-line" x="-138" y="-63" width="276" height="126" rx="63"/><path class="track-route" d="M75-74H-75a74 74 0 0 0 0 148H75a74 74 0 0 0 0-148"/><circle class="runner-dot" cx="75" cy="-74" r="7"/><path d="M-74-91v36M-68-91v36" stroke="var(--muted)" stroke-width="1.4"/></g>
+        <path class="track-rule" d="M0 268h540"/>
+        <text x="0" y="290">YOUR TRACK. YOUR PACE.</text><text x="540" y="290" text-anchor="end">EVERY STEP, CONSIDERED.</text>
+      </svg></div>
+      <div class="overview-body"><div><div class="section-heading"><h3>开始之前</h3><span>一次配置，随时回到这里调整</span></div><div class="cards" id="overview-cards"><div class="note">正在读取本地配置…</div></div></div>
+      <aside class="setup-aside"><div class="eyebrow">SETUP PROGRESS</div><div class="ring-wrap"><svg class="progress-ring" viewBox="0 0 110 110" aria-hidden="true"><circle cx="55" cy="55" r="48"/><circle id="setup-ring" class="progress" cx="55" cy="55" r="48"/></svg><div class="setup-count" aria-live="polite"><span id="setup-count">0</span><small> / 6</small></div></div><h3 id="next-step-title">先完成基础配置</h3><p id="next-step-copy">按左侧配置顺序，连接账号、准备历史记录，再完成操场标定。</p><a class="aside-link" href="/ui" target="_blank" rel="noopener">独立跑步控制台 <span data-icon="arrow"></span></a><a class="aside-link" href="/" target="_blank" rel="noopener">轨迹生成与回放 <span data-icon="arrow"></span></a><div class="note" id="ov-note"></div></aside></div>
+    </section>
+
+    <section class="panel" id="panel-config">
+      <div class="overline">Step 1</div>
+      <h2>学校与账号</h2>
+      <p class="hint">从目录点选学校，自动填地址与 id。</p>
+
+      <div class="note warn" role="note">
+        <b>先看风险，再往下点。</b>
+        云运动服务器在查重复轨迹，也可能有人工复审；成绩跑出来合格不代表一直合格，有反馈说过一两天被标成作弊。
+        上游作者在 issue #82 里的原话是「在我搞明白之前不建议继续用」。
+        <b>建议一天一张表，别用同一条轨迹反复跑</b>；万一被标了，先停、别连续重试。
+        出问题到本 fork 的 issue 区，不要去打扰上游作者。详见仓库根目录 <code>README.fork.md</code> 的「先说风险」。
+      </div>
+
+<div class="form-section"><div class="section-caption"><h3>选择学校</h3><p>目录自动填写连接信息。</p></div><div>      <div class="row" style="margin-bottom:10px">
+        <button class="primary" id="btn-schools">加载学校列表</button>
+        <input id="school-filter" placeholder="关键字过滤…" style="max-width:220px">
+        <span class="small muted" id="schools-hint"></span>
+      </div>
+      <select id="school-list" size="8" hidden></select>
+<div class="grid2">        <label class="field">学校名称<input id="f-school_name" placeholder="点选列表自动填入"></label></div><details class="advanced"><summary>服务器与登录路由 · 高级配置</summary><div class="grid2">
+
+        <label class="field">服务器地址<input id="f-school_host"></label>
+        <label class="field">学校 id<input id="f-school_id"></label>
+        <label class="field">登录路由<input id="f-school_login_url" placeholder="appLogin"></label>
+      </div></details></div></div>
+<div class="form-section"><div class="section-caption"><h3>设备信息</h3><p>与你使用的手机保持一致。</p></div><div>      <div class="grid2">
+        <label class="field">设备名<input id="f-device_name" placeholder="Xiaomi"></label>
+        <label class="field">系统版本<input id="f-sys_edition" placeholder="14"></label>
+        <label class="field">高德 map_key（可选）<input id="f-map_key"></label>
+      </div>
+
+</div></div>
+<div class="form-section"><div class="section-caption"><h3>账号与密码</h3><p>仅账号密码登录时需要。</p></div><div>      <div class="grid2">
+        <label class="field">学号<input id="f-username" autocomplete="off"></label>
+        <label class="field">密码 <span id="pw-set-hint" class="muted"></span>
+          <input id="f-password" type="password" autocomplete="new-password" placeholder="留空 = 不修改"></label>
+      </div>
+      <div class="note warn">方式 B 会使手机端登录失效，登录路由因校而异；推荐方式 A（ADB）。
+        密码仅存本机 config.ini。</div>
+
+</div></div>
+      <div class="form-actions">
+        <button class="primary" id="btn-save-config">保存配置</button>
+        <span class="small muted" id="config-save-hint"></span>
+      </div>
+<div class="guide-footer"><span>配置保存后，继续连接登录令牌。</span><button data-goto="token">下一步 <span aria-hidden="true">→</span></button></div>
+    </section>
+
+    <section class="panel" id="panel-token">
+      <div class="overline">Step 2</div>
+      <h2>获取登录令牌</h2>
+      <p class="hint">推荐 ADB 从手机日志提取——免登录、不碰密码。</p>
+
+<div class="method-grid"><article class="method recommended"><span class="badge">推荐方式 · ADB</span><h3>连接手机，直接同步。</h3><p>USB 连接手机并开启 USB 调试，保持云运动 App 已登录。<br>从手机日志提取令牌，无需输入密码。</p><button class="primary" data-busy-indicator id="btn-token-adb">从手机拉取令牌 <span aria-hidden="true">↗</span></button></article><article class="method"><span class="method-number">ALTERNATIVE · 账号登录</span><h3>使用已有账号。</h3><p>使用已保存的学号与密码登录一次。<br>失败时请勿连续重试，留意账号锁定。</p><button class="danger" data-busy-indicator id="btn-token-login">用学号密码登录一次</button></article></div>
+      <pre class="log" id="token-log" hidden></pre>
+
+      <h3>验证</h3>
+      <div class="row">
+        <button id="btn-verify-token">验证当前 token</button>
+        <span id="verify-result" class="small"></span>
+      </div>
+<div class="guide-footer"><span>令牌可用后，准备标定所需的历史记录。</span><button data-goto="history">下一步 <span aria-hidden="true">→</span></button></div>
+    </section>
+
+    <section class="panel" id="panel-history">
+      <div class="overline">Step 3</div>
+      <h2>下载历史跑步记录</h2>
+      <p class="hint">标定的原料——多下几条<b>同一操场</b>的记录（≥3 条）。</p>
+      <div class="row">
+        <button class="primary" id="btn-terms">加载学期列表</button>
+        <select id="sel-term" style="max-width:260px"><option value="">— 先加载学期 —</option></select>
+        <button id="btn-runs">加载记录</button>
+        <span class="small muted" id="history-local-hint"></span>
+      </div>
+      <div id="runs-wrap" hidden>
+        <div class="row" style="margin:12px 0 8px">
+          <label class="small" style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" id="chk-all" style="width:auto" checked> 全选</label>
+          <button class="primary" id="btn-download">下载所选明细</button>
+          <span class="small muted" id="download-hint"></span>
+        </div>
+        <table class="tbl" id="runs-table">
+          <thead><tr><th style="width:36px"></th><th>结束时间</th><th>里程(km)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <pre class="log" id="history-log" hidden></pre>
+<div class="guide-footer"><span>同一操场至少 3 条记录，能让标定更稳妥。</span><button data-goto="calibration">下一步 <span aria-hidden="true">→</span></button></div>
+    </section>
+
+    <section class="panel" id="panel-calibration">
+      <div class="overline">Step 4</div>
+      <h2>标定操场</h2>
+      <p class="hint">拟合中心 / 朝向 / 半径——后续一切几何判定的基准。</p>
+      <div class="note" id="cal-summary">读取中…</div>
+      <div class="row">
+        <label class="field" style="max-width:130px">圈长(米)
+          <input id="f-lap" type="number" value="400" min="200" max="600"></label>
+        <label class="field" style="max-width:130px">簇序号
+          <input id="f-cluster" type="number" value="0" min="0"></label>
+        <button class="primary" data-busy-indicator id="btn-calibrate">从历史记录标定</button>
+      </div>
+      <div class="note">多操场学校会按位置自动分簇（日志列出各簇中心与条数），默认取记录最多的簇；
+        想标别的场改簇序号重跑。输出末尾朝向差应 &lt; 2°。</div>
+      <pre class="log" id="cal-log" hidden></pre>
+<div class="guide-footer"><span>标定完成后，核对匹配的任务与场地。</span><button data-goto="lock">下一步 <span aria-hidden="true">→</span></button></div>
+    </section>
+
+    <section class="panel" id="panel-lock">
+      <div class="overline">Step 5</div>
+      <h2>锁定核对</h2>
+      <p class="hint">任务号每学期都变，脚本只认几何——核对锁到的是不是你标的场。</p>
+      <div class="row"><button class="primary" id="btn-lock">查询场地锁定</button></div>
+      <div id="lock-result" style="margin-top:14px"></div>
+<div class="guide-footer"><span>场地核对完成后，按需准备人脸照片。</span><button data-goto="face">下一步 <span aria-hidden="true">→</span></button></div>
+    </section>
+
+    <section class="panel" id="panel-face">
+      <div class="overline">Step 6</div>
+      <h2>人脸库</h2>
+      <p class="hint">学校开人脸核验时需要；导入多张，激活一张。</p>
+      <div class="upload-area"><h3>添加你的照片</h3><p>支持 JPG、PNG 与 WebP，可一次导入多张；导入后自动检测取景质量。</p><div class="row" style="margin:12px 0">
+        <input type="file" id="face-files" accept="image/jpeg,image/png,image/webp" multiple style="max-width:340px">
+        <button class="primary" data-busy-indicator id="btn-face-upload">导入所选照片</button>
+        <span class="small muted" id="face-upload-hint"></span>
+      </div>
+      </div><div class="note warn" id="face-dep-note" hidden></div>
+      <div class="faces" id="face-grid"></div>
+      <h3>取景要求（导入时逐项自动检查）</h3>
+      <dl class="spec">
+        <dt>位置</dt><dd>脸在画面中部：上、下各留 ≥ 1/5 画面高，左右各留 ≥ 1/10 画面宽，脸框完整。</dd>
+        <dt>大小</dt><dd>脸宽占画面宽 <b>40%–65%</b>，约一臂距离的半身自拍。</dd>
+        <dt>姿态</dt><dd>正脸直视：不侧脸、不仰俯、不歪头（倾角 ≤ 15°）。</dd>
+        <dt>质量</dt><dd>清晰原片、光线充足；逆光 / 模糊 / 大俯角过不了。未过原因显示在缩略图下方。</dd>
+      </dl>
+      <div class="note">照片仅存本机 <code>data/face_library/</code>；开了人脸而未激活照片时，
+        控制台在准备与确认时会红字提醒，执行在开始前被拒。</div>
+<div class="guide-footer"><span>配置妥当后，进入轨迹生成与确认流程。</span><button data-goto="run">下一步 <span aria-hidden="true">→</span></button></div>
+    </section>
+
+    <section class="panel" id="panel-run">
+<div class="workspace-heading"><div><div class="overline">RUN WORKSPACE</div><h2>跑步工作台</h2><p class="hint">生成轨迹，核对卡片，再确认开跑。每一步都由你决定。</p></div><a class="quiet-link" href="/ui" target="_blank" rel="noopener">独立打开 ↗</a></div>
+<div class="note warn">只有确认开跑才会开始真实提交；开始后无法撤销，记录按用时完成。离线演练不会联网。</div>
+      <iframe id="run-frame" src="/ui?embedded=1" title="跑步控制台"></iframe>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<!-- STUDIO_SCRIPT -->
+
+<script>
+(function () {
+  var API = "/api/admin";
+  var state = { step: "overview", terms: [], runs: [], schools: [], schoolsSource: "",
+                steps: [] };
+
+  function $(id) { return document.getElementById(id); }
+
+  /* ── 主题（亮 / 暗） ── */
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("yunrun-theme", theme); } catch (e) {}
+  }
+  var savedTheme = null;
+  try { savedTheme = localStorage.getItem("yunrun-theme"); } catch (e) {}
+  applyTheme(savedTheme || "light");
+  $("theme-btn").addEventListener("click", function () {
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  });
+
+  function toast(text, isError) {
+    var node = $("toast");
+    node.textContent = text;
+    node.className = "toast open" + (isError ? " err" : "");
+    clearTimeout(node._timer);
+    node._timer = setTimeout(function () { node.className = "toast"; }, 3800);
+  }
+  async function api(path, options) {
+    var response = await fetch(API + path, options);
+    var text = await response.text();
+    var data;
+    try { data = text ? JSON.parse(text) : {}; } catch (error) { data = { raw: text }; }
+    return { status: response.status, data: data };
+  }
+  function post(path, body) {
+    return api(path, { method: "POST", headers: { "Content-Type": "application/json" },
+                       body: JSON.stringify(body || {}) });
+  }
+  function errText(data) {
+    if (!data) { return "未知错误"; }
+    if (data.error) { return data.error.message || data.error.code || JSON.stringify(data.error); }
+    return data.message || JSON.stringify(data);
+  }
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ── 子进程任务流 ── */
+  function streamJob(jobId, logEl, onDone) {
+    logEl.hidden = false;
+    logEl.textContent = "";
+    var since = 0;
+    var timer = setInterval(async function () {
+      var result = await api("/jobs/" + jobId + "?since=" + since);
+      var data = result.data || {};
+      if (data.ok !== true && (data.error || {}).code === "unknown_job") {
+        clearInterval(timer); toast("任务不存在或已过期", true); return;
+      }
+      var snap = data.ok === false ? {} : data;
+      (snap.lines || []).forEach(function (line) {
+        logEl.textContent += line + "\n";
+        logEl.scrollTop = logEl.scrollHeight;
+      });
+      since = snap.total_lines || since;
+      if (snap.status && snap.status !== "running") {
+        clearInterval(timer);
+        if (onDone) { onDone(snap); }
+      }
+    }, 700);
+    return timer;
+  }
+  async function startJob(kind, logEl, onDone, busyBtn) {
+    if (busyBtn) { busyBtn.disabled = true; }
+    var result = await post("/" + kind);
+    if (result.data.ok !== true) {
+      if (busyBtn) { busyBtn.disabled = false; }
+      toast(errText(result.data), true); return;
+    }
+    streamJob(result.data.job_id, logEl, function (snap) {
+      if (busyBtn) { busyBtn.disabled = false; }
+      var ok = snap.status === "done";
+      toast(kind + (ok ? " 完成" : " 结束但返回非 0，请看日志"), !ok);
+      if (onDone) { onDone(snap); }
+    });
+  }
+  async function startJobBtn(btn, send, logEl, onDone) {
+    btn.disabled = true;
+    var result = await send();
+    if (result.data.ok !== true) { btn.disabled = false; toast(errText(result.data), true); return; }
+    streamJob(result.data.job_id, logEl, function (snap) {
+      btn.disabled = false;
+      var ok = snap.status === "done";
+      toast(ok ? "完成" : "结束但返回非 0，请看日志", !ok);
+      if (onDone) { onDone(snap); }
+    });
+  }
+
+  /* ── 导航 ── */
+  var STEPS = [
+    {id:"overview",title:"总览",group:"工作空间"},
+    {id:"run",title:"跑步工作台"},
+    {id:"config",title:"学校与账号",group:"配置与数据"},
+    {id:"token",title:"登录令牌"},
+    {id:"history",title:"历史记录"},
+    {id:"calibration",title:"操场标定"},
+    {id:"lock",title:"场地核对"},
+    {id:"face",title:"人脸库"}
+  ];
+  function stepDone(id) {
+    var hit = state.steps.filter(function (s) { return s.id === id; })[0];
+    return hit ? !!hit.done : false;
+  }
+  function renderNav() {
+    $("nav").innerHTML = STEPS.map(function(s) {
+      var done = stepDone(s.id), active = state.step === s.id;
+      return (s.group ? '<span class="nav-label">'+esc(s.group)+'</span>' : '') +
+        '<button type="button" class="item'+(active ? ' active' : '')+'" data-step="'+s.id+'"'+(active ? ' aria-current="page"' : '')+'>'+Studio.icon(s.id)+'<span class="title">'+esc(s.title)+'</span>'+(done ? '<span class="nav-check" aria-label="已完成">✓</span>' : '')+'</button>'+(s.id === 'run' ? '<a class="item" href="/" target="_blank" rel="noopener">'+Studio.icon('lab')+'<span class="title">轨迹实验室</span><span aria-hidden="true">↗</span></a>' : '');
+    }).join('');
+    $("nav").querySelectorAll('[data-step]').forEach(function(node) {
+      node.addEventListener('click',function() { showStep(node.dataset.step); });
+    });
+  }
+  function showStep(step, fromHistory) {
+    var current = STEPS.find(function(s) { return s.id === step; });
+    if (!current) return;
+    state.step = step;
+    renderNav();
+    STEPS.forEach(function(s) { $("panel-"+s.id).classList.toggle("show",s.id === step); });
+    $("page-crumb").textContent = current.title;
+    if (location.hash !== '#'+step) history[fromHistory ? 'replaceState' : 'pushState'](null,'','#'+step);
+    window.scrollTo({top:0,behavior:'instant'});
+    if (step === "overview") { loadOverview(); }
+    if (step === "config") { loadConfigForm(); loadSchools(false); }
+    if (step === "history") { refreshLocalHistory(); }
+    if (step === "calibration") { loadCalibration(); }
+    if (step === "face") { loadFaces(); }
+  }
+  document.addEventListener('click',function(e) {
+    var target=e.target.closest('[data-goto]');
+    if(target && !target.closest('#overview-cards')) showStep(target.dataset.goto);
+  });
+  window.addEventListener('hashchange',function() { if (location.hash !== '#main') showStep(location.hash.slice(1) || 'overview', true); });
+
+  async function loadOverview() {
+    var result = await api("/overview");
+    var data = result.data || {};
+    if (data.ok !== true) {
+      $("overview-cards").innerHTML = '<div class="note bad">读取失败：' + esc(errText(data)) + "</div>";
+      return;
+    }
+    state.steps = data.steps || [];
+    renderNav();
+    var next = state.steps.find(function (s) { return !s.done; });
+    var doneCount = 0;
+    var cards = state.steps.map(function (s) {
+      if (s.done) { doneCount += 1; }
+      var isNext = !!next && s.id === next.id;
+      return '<div class="card' + (s.done ? ' done' : '') + (isNext ? ' next' : '') + '">' +
+        '<div class="card-copy"><div class="t"><span class="dot ' + (s.done ? "done" : (isNext ? "next" : "")) +
+        '"></span>' + esc(s.title) + (s.done ? ' <span class="ok-text small">已完成</span>' : "") +
+        (isNext ? ' <span class="card-badge">下一步</span>' : "") +
+        '</div><div class="d">' + esc(s.detail || "") + '</div></div>' +
+        '<button class="go" data-goto="' + esc(s.id) + '">' + (s.done ? '查看' : '去完成') +
+        ' <span aria-hidden="true">→</span></button></div>';
+    });
+    $("overview-cards").innerHTML = cards.join("");
+    Array.prototype.forEach.call($("overview-cards").querySelectorAll("[data-goto]"), function (btn) {
+      btn.addEventListener("click", function () { showStep(btn.dataset.goto); });
+    });
+    var total = state.steps.length || 6;
+    $("setup-count").textContent = doneCount;
+    $("setup-ring").style.strokeDashoffset = 301.6*(1-doneCount/total);
+    $("continue-setup").dataset.goto = next ? next.id : 'run';
+    $("continue-setup").textContent = next ? (doneCount ? '继续配置 →' : '开始配置 →') : '进入跑步工作台 →';
+    $("next-step-title").textContent = next ? '下一步 · '+next.title : '准备妥当，可以出发';
+    $("next-step-copy").textContent = next ? next.detail : '配置已完成。进入工作台生成轨迹，核对卡片后再确认开跑。';
+    $("top-progress").innerHTML = '<span class="mini-bar" aria-hidden="true"><i style="width:' +
+      Math.round(doneCount / total * 100) + '%"></i></span>进度 <b>' + doneCount + '</b> / ' + total +
+      (data.token_set ? "" : '<span class="pill-tag">令牌未获取</span>');
+    $("ov-note").textContent = "本地历史 " + (data.history_count || 0) + " 份 · " +
+      "人脸照片 " + ((data.face || {}).count || 0) + " 张";
+  }
+
+  /* ── ① 配置 ── */
+  var FIELD_MAP = [
+    ["school_name", "f-school_name", "Yun"], ["school_host", "f-school_host", "Yun"],
+    ["school_id", "f-school_id", "Yun"], ["school_login_url", "f-school_login_url", "Yun"],
+    ["device_name", "f-device_name", "User"], ["sys_edition", "f-sys_edition", "User"],
+    ["map_key", "f-map_key", "User"], ["username", "f-username", "Login"],
+    ["password", "f-password", "Login"],
+  ];
+  async function loadConfigForm() {
+    var result = await api("/config");
+    var data = result.data || {};
+    if (data.ok !== true) { toast(errText(data), true); return; }
+    var cfg = data.config || {};
+    FIELD_MAP.forEach(function (item) {
+      var value = ((cfg[item[2]] || {})[item[0]]);
+      $(item[1]).value = value == null ? "" : value;
+    });
+    $("pw-set-hint").textContent = ((cfg.Login || {}).password__set) ? "（已保存，留空不改）" : "";
+  }
+  async function saveConfig() {
+    var payload = { Yun: {}, User: {}, Login: {} };
+    FIELD_MAP.forEach(function (item) { payload[item[2]][item[0]] = $(item[1]).value; });
+    if (!payload.Login.password) { delete payload.Login.password; }
+    var result = await post("/config", payload);
+    if (result.data.ok === true) {
+      toast("已保存 " + (result.data.changed || []).length + " 个字段");
+      $("config-save-hint").textContent = "已写入 config.ini";
+      $("pw-set-hint").textContent = "（已保存，留空不改）";
+    } else { toast(errText(result.data), true); }
+  }
+  function renderSchoolList() {
+    var filter = $("school-filter").value.trim().toLowerCase();
+    var list = $("school-list");
+    var shown = 0;
+    list.innerHTML = state.schools.map(function (s) {
+      if (filter && s.name.toLowerCase().indexOf(filter) < 0) { return ""; }
+      shown += 1;
+      return '<option value="' + esc(s.name) + '">' + esc(s.name) + " · id " + esc(s.id) + "</option>";
+    }).join("");
+    list.hidden = false;
+    $("schools-hint").textContent = shown + " / " + state.schools.length +
+      (state.schoolsSource ? " · " + state.schoolsSource : "");
+  }
+  async function loadSchools(force) {
+    if (state.schools.length && !force) { renderSchoolList(); return; }
+    $("schools-hint").textContent = "加载中…";
+    var result = await api("/schools");
+    var data = result.data || {};
+    if (data.ok !== true) {
+      $("schools-hint").textContent = "";
+      toast("学校列表加载失败：" + errText(data), true);
+      return;
+    }
+    state.schools = data.schools || [];
+    state.schoolsSource = data.note || data.source || "";
+    if (!state.schools.length) { toast("目录为空", true); return; }
+    renderSchoolList();
+  }
+  function pickSchool() {
+    var name = $("school-list").value;
+    var hit = state.schools.filter(function (s) { return s.name === name; })[0];
+    if (!hit) { return; }
+    $("f-school_name").value = hit.name;
+    $("f-school_host").value = hit.url || "";
+    $("f-school_id").value = String(hit.id || "");
+    toast("已选 " + hit.name);
+  }
+
+  /* ── ② 令牌 ── */
+  async function verifyToken() {
+    $("verify-result").textContent = "查询中…";
+    var result = await post("/verify-token", {});
+    var data = result.data || {};
+    if (data.ok !== true) {
+      $("verify-result").innerHTML = '<span class="bad-text">' + esc(errText(data)) + "</span>";
+      return;
+    }
+    $("verify-result").innerHTML = data.valid
+      ? '<span class="ok-text">✔ 有效（' + (data.tasks || 0) + " 个任务）</span>"
+      : '<span class="bad-text">✘ 无效：code=' + esc(data.code) + " " + esc(data.msg || "") + "</span>";
+    loadOverview();
+  }
+
+  /* ── ③ 历史 ── */
+  async function refreshLocalHistory() {
+    var result = await api("/history/local");
+    var data = result.data || {};
+    $("history-local-hint").textContent = data.ok ? "本地 " + (data.count || 0) + " 份" : "";
+  }
+  async function loadTerms() {
+    var result = await api("/history/terms");
+    var data = result.data || {};
+    if (data.ok !== true) { toast(errText(data), true); return; }
+    state.terms = data.terms || [];
+    $("sel-term").innerHTML = state.terms.length
+      ? state.terms.map(function (t) {
+          return '<option value="' + esc(t.value) + '">' + esc(t.key + "（" + (t.sjd || "") + "）") + "</option>";
+        }).join("")
+      : '<option value="">（没有学期数据）</option>';
+    toast("已加载 " + state.terms.length + " 个学期");
+  }
+  async function loadRuns() {
+    var table = $("sel-term").value;
+    if (!table) { toast("先加载并选择学期", true); return; }
+    $("runs-wrap").hidden = true;
+    var result = await post("/history/runs", { term_table: table });
+    var data = result.data || {};
+    if (data.ok !== true) { toast(errText(data), true); return; }
+    state.runs = data.runs || [];
+    var tbody = $("runs-table").querySelector("tbody");
+    tbody.innerHTML = state.runs.map(function (run) {
+      return "<tr><td><input type='checkbox' class='run-chk' value='" + esc(run.id) +
+        "' checked style='width:auto'></td><td>" + esc(run.end_time) + "</td><td>" + esc(run.mileage) + "</td></tr>";
+    }).join("");
+    $("runs-wrap").hidden = false;
+    $("chk-all").checked = true;
+    toast("共 " + state.runs.length + " 条");
+  }
+  async function downloadRuns() {
+    var ids = Array.prototype.map.call(document.querySelectorAll(".run-chk:checked"),
+                                       function (n) { return n.value; });
+    if (!ids.length) { toast("至少勾选一条", true); return; }
+    $("download-hint").textContent = "下载中…（" + ids.length + " 条）";
+    var result = await post("/history/download", { term_table: $("sel-term").value, ids: ids });
+    var data = result.data || {};
+    if (data.ok !== true) { toast(errText(data), true); $("download-hint").textContent = ""; return; }
+    $("download-hint").textContent = "已保存 " + (data.saved || []).length + " 份" +
+      ((data.failed || []).length ? "，失败 " + data.failed.length + " 份" : "");
+    toast("已保存 " + (data.saved || []).length + " 份");
+    refreshLocalHistory();
+  }
+
+  /* ── ④ 标定 ── */
+  async function loadCalibration() {
+    var result = await api("/calibration");
+    var data = result.data || {};
+    var cal = (data.calibration || {});
+    $("cal-summary").className = "note " + (cal.calibrated ? "ok" : "warn");
+    $("cal-summary").textContent = cal.summary_line || "尚未标定";
+  }
+  function calibrate() {
+    startJobBtn($("btn-calibrate"), function () {
+      return post("/calibrate", { lap_length: parseFloat($("f-lap").value || "400"),
+                                  cluster_index: parseInt($("f-cluster").value || "0", 10) });
+    }, $("cal-log"), function () { loadCalibration(); loadOverview(); });
+  }
+
+  /* ── ⑤ 锁定 ── */
+  async function stadiumLock() {
+    $("lock-result").innerHTML = '<span class="muted small">查询中…</span>';
+    var result = await post("/stadium-lock", {});
+    var data = result.data || {};
+    var stadium = data.stadium || {};
+    var rules = data.tasks || {};
+    if (stadium.ok === true) {
+      var html = '<div class="note ok"><b>' + esc(stadium.stadium_name || "?") +
+        '</b>（task ' + esc(stadium.task_id) + "）<br>" +
+        '<span class="small">' + esc(stadium.reason || "") + " · 围栏 " + (stadium.fence_points || 0) +
+        " 点 / 共 " + (stadium.task_count || 0) + " 个任务</span></div>";
+      if (rules.ok === true) {
+        html += '<table class="tbl"><thead><tr><th>任务</th><th>名称</th><th>里程下限</th><th>人脸</th><th>选中</th></tr></thead><tbody>' +
+          (rules.tasks || []).map(function (t) {
+            return "<tr><td>" + esc(t.id) + "</td><td>" + esc(t.ra_name) + "</td><td>" +
+              esc(t.min_km) + " km</td><td>" + (t.face_required
+                ? '<span class="bad-text">需要</span>' : "—") +
+              "</td><td>" + (t.id === stadium.task_id ? "✔" : "") + "</td></tr>";
+          }).join("") + "</tbody></table>";
+      }
+      $("lock-result").innerHTML = html;
+    } else {
+      $("lock-result").innerHTML = '<div class="note bad"><b>无法锁定：</b>' +
+        esc(errText(stadium.ok === false ? stadium : data)) + "</div>";
+    }
+  }
+
+  /* ── ⑥ 人脸库 ── */
+  async function loadFaces() {
+    var result = await api("/face");
+    var data = result.data || {};
+    if (data.ok !== true) { toast(errText(data), true); return; }
+    var summary = data.summary || {};
+    if (!summary.detector_ready) {
+      $("face-dep-note").hidden = false;
+      $("face-dep-note").textContent = "自动检测不可用：" + (summary.detector_error || "");
+    } else { $("face-dep-note").hidden = true; }
+    var entries = data.entries || [];
+    $("face-grid").innerHTML = entries.length ? entries.map(faceCard).join("")
+      : '<div class="empty-state">' + Studio.icon("face") + '还没有照片<br>建议导入 3–5 张清晰正脸照，再选择一张激活。</div>';
+    entries.forEach(function (entry) {
+      $("face-del-" + entry.entry).addEventListener("click", async function () {
+        if (!confirm("删除「" + entry.name + "」？")) { return; }
+        var r = await post("/face/delete", { entry: entry.entry });
+        if (r.data.ok !== true) { toast(errText(r.data), true); return; }
+        loadFaces(); loadOverview();
+      });
+      var btn = $("face-act-" + entry.entry);
+      if (btn) { btn.addEventListener("click", async function () {
+        var r = await post("/face/activate", { entry: entry.entry });
+        if (r.data.ok !== true) { toast(errText(r.data), true); return; }
+        toast("已激活 " + entry.name);
+        loadFaces(); loadOverview();
+      }); }
+    });
+  }
+  function faceCard(entry) {
+    var gate = entry.gate || {};
+    var gateTag = gate.ok
+      ? '<span class="tag ok">通过</span>'
+      : '<span class="tag bad" title="' + esc(gate.reason || "") + '">' + esc(gate.reason || "?") + "</span>";
+    return '<div class="face' + (entry.active ? " active" : "") + '">' +
+      '<img src="' + API + "/face/photo/" + encodeURIComponent(entry.entry) + '?v=' + Date.now() + '" alt="">' +
+      '<div class="nm">' + esc(entry.name) + (entry.active ? ' <span class="ok-text">· 激活中</span>' : "") + "</div>" +
+      '<div class="st">置信度 ' + (gate.score != null ? Number(gate.score).toFixed(3) : "—") +
+      " · " + esc(entry.added_at || "") + "</div>" +
+      '<div class="tagline">' + gateTag +
+      (entry.has_annotation ? "" : '<span class="tag">无标注</span>') + "</div>" +
+      '<div class="ops"><button id="face-del-' + esc(entry.entry) + '" class="danger">删除</button>' +
+      (gate.ok && !entry.active ? '<button id="face-act-' + esc(entry.entry) + '" class="primary">激活</button>' : "") +
+      "</div></div>";
+  }
+  async function uploadFaces() {
+    var files = Array.prototype.slice.call($("face-files").files || []);
+    if (!files.length) { toast("先选择照片", true); return; }
+    var btn = $("btn-face-upload");
+    btn.disabled = true;
+    $("face-upload-hint").textContent = "导入中…";
+    var ok = 0;
+    for (var i = 0; i < files.length; i++) {
+      var name = files[i].name.replace(/\.[^.]+$/, "");
+      var response = await fetch(API + "/face/upload?name=" + encodeURIComponent(name), {
+        method: "POST", body: files[i] });
+      var data = {};
+      try { data = await response.json(); } catch (error) { data = {}; }
+      if (data.ok === true) {
+        ok += 1;
+        var gate = ((data.entry || {}).gate || {});
+        toast("已导入 " + name + (gate.ok ? "" : "（" + (gate.reason || "门未过") + "）"), !gate.ok);
+      } else { toast(name + " 失败：" + errText(data), true); }
+    }
+    btn.disabled = false;
+    $("face-upload-hint").textContent = ok + " / " + files.length + " 张";
+    $("face-files").value = "";
+    loadFaces(); loadOverview();
+  }
+
+  /* ── 绑定 ── */
+  $("btn-save-config").addEventListener("click", saveConfig);
+  $("btn-schools").addEventListener("click", function () { loadSchools(true); });
+  $("school-filter").addEventListener("input", renderSchoolList);
+  $("school-list").addEventListener("change", pickSchool);
+  $("school-list").addEventListener("dblclick", pickSchool);
+  $("btn-token-adb").addEventListener("click", function () {
+    startJob("token-adb", $("token-log"), function () { loadOverview(); }, $("btn-token-adb"));
+  });
+  $("btn-token-login").addEventListener("click", function () {
+    startJob("token-login", $("token-log"), function () { loadOverview(); }, $("btn-token-login"));
+  });
+  $("btn-verify-token").addEventListener("click", verifyToken);
+  $("btn-terms").addEventListener("click", loadTerms);
+  $("btn-runs").addEventListener("click", loadRuns);
+  $("chk-all").addEventListener("change", function () {
+    Array.prototype.forEach.call(document.querySelectorAll(".run-chk"), function (n) {
+      n.checked = $("chk-all").checked;
+    });
+  });
+  $("btn-download").addEventListener("click", downloadRuns);
+  $("btn-calibrate").addEventListener("click", calibrate);
+  $("btn-lock").addEventListener("click", stadiumLock);
+  $("btn-face-upload").addEventListener("click", uploadFaces);
+
+  renderNav();
+  var initialStep = location.hash.slice(1);
+  showStep(STEPS.some(function(s) { return s.id === initialStep; }) ? initialStep : "overview", true);
+  if (state.step !== "overview") loadOverview();
+})();
+</script>
+</body>
+</html>

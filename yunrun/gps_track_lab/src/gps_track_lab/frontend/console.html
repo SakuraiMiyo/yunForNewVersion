@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>云运动 · 跑步工作台</title>
+<!-- STUDIO_STYLE -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%2711%27 fill=%27%231e392e%27/%3E%3Cpath d=%27M22 6 11 23h9l-2 11 12-18h-9z%27 fill=%27%23d8ed92%27/%3E%3C/svg%3E">
+</head>
+<body class="console-page">
+<header>
+  <h1><span data-icon="run"></span>云运动 · 跑步工作台</h1>
+  <div class="chips" id="chips"><span class="chip">读取状态…</span></div>
+  <a class="admin-link" href="/admin">← 管理台</a>
+  <button class="theme-btn" id="theme-btn" title="切换浅色 / 深色" aria-label="切换浅色与深色主题" data-icon="moon"></button>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2><span class="step-index">01</span> 生成轨迹</h2>
+      <div class="hintbox">
+        生成会写入 <b>打表文件</b>（分批上传用）并渲染确认卡片，<b>此时不会联网提交</b>。
+        想改口径就填下面参数，留空按健康跑口径（距离 &gt; 3km、用时 16~25min）。
+      </div>
+      <div class="parameter-grid">
+        <label class="field">候选数<input id="gen-candidates" type="number" value="8" min="1" max="100"></label>
+        <label class="field">种子（可空）<input id="gen-seed" type="text" placeholder="随机"></label>
+        <label class="field">距离 km<input id="gen-distance" type="text" placeholder="3.01~3.20"></label>
+        <label class="field">配速 min/km<input id="gen-pace" type="text" placeholder="自动"></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary btn-block" data-busy-indicator id="btn-generate">生成一版轨迹并出卡</button>
+      </div>
+    </section>
+
+    <section style="margin-top:16px">
+      <h2><span class="step-index">02</span> 最近轨迹 <span class="small muted">保留最新 10 条</span></h2>
+      <div class="row" style="margin-bottom:10px">
+        <button id="btn-refresh">刷新列表</button>
+        <span class="small muted" id="list-note"></span>
+      </div>
+      <div class="list" id="runs"></div>
+      <div class="preview" id="preview"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2><span class="step-index">03</span> 核对与开跑</h2>
+      <div id="ready" class="hintbox">当前没有待开跑的轨迹。先「生成一版轨迹并出卡」。</div>
+      <div class="row">
+        <button class="primary" id="btn-review" disabled>核对并开跑…</button>
+        <button id="btn-dry" disabled>先演练一次（不联网）</button>
+        <button class="danger" id="btn-abort" disabled>中止</button>
+      </div>
+      <div class="row small muted" style="margin-top:10px">
+        <span>执行模式：<b>打表（分批上传）</b> · 真实跑步按用时等待，可关页面，日志继续。</span>
+      </div>
+    </section>
+
+    <section style="margin-top:16px">
+      <h2><span class="step-index">04</span> 执行日志 <span class="state" id="job-state" style="margin-left:8px">空闲</span></h2>
+      <pre id="log">（暂无）</pre>
+      <div class="row small muted" style="margin-top:8px" id="job-foot"></div>
+    </section>
+  </div>
+</main>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h3>确认开始跑步</h3>
+    <div class="small muted" id="modal-sub"></div>
+    <div class="grid">
+      <div><img id="modal-card" alt="轨迹卡片"></div>
+      <div>
+        <dl class="kv" id="modal-kv"></dl>
+        <div class="warn" id="modal-face-warn" hidden style="margin-top:12px"></div>
+        <div class="warn" style="margin-top:12px">
+          点下面的按钮才会真正开始按打表模式提交这条记录，<b>开始后无法撤销</b>。
+          记录要等跑步用时走完才会出现在成绩里。
+        </div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button id="btn-cancel-modal">再想想</button>
+      <button class="primary" id="btn-confirm-run">确认开跑</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<!-- STUDIO_SCRIPT -->
+
+<script>
+(function () {
+  var API = "/api/console";
+  var state = { pending: null, jobId: null, since: 0, polling: null, selected: null,
+                activeRun: null };
+
+  function $(id) { return document.getElementById(id); }
+  function toast(text, isError) {
+    var node = $("toast");
+    node.textContent = text;
+    node.className = "toast open" + (isError ? " err" : "");
+    clearTimeout(node._timer);
+    node._timer = setTimeout(function () { node.className = "toast"; }, 4200);
+  }
+  async function api(path, options) {
+    var response = await fetch(API + path, options);
+    var text = await response.text();
+    var data;
+    try { data = text ? JSON.parse(text) : {}; } catch (error) { data = { raw: text }; }
+    return { status: response.status, data: data };
+  }
+  function post(path, body) {
+    return api(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {})
+    });
+  }
+  function errText(data) {
+    if (!data) { return "未知错误"; }
+    if (data.error) { return data.error.message || data.error.code || JSON.stringify(data.error); }
+    return data.message || JSON.stringify(data);
+  }
+  function fmt(value, digits, unit) {
+    if (value === null || value === undefined || isNaN(value)) { return "—"; }
+    return Number(value).toFixed(digits === undefined ? 2 : digits) + (unit || "");
+  }
+  // 下面这些字符串来自 config.ini（学校名/主机/人脸文件名），是可能被外部数据填上的，
+  // 拼进 innerHTML 之前必须转义——/ui 是能触发真实提交的页面。
+  function esc(value) {
+    return String(value === null || value === undefined ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // ---------------------------------------------------------------- status
+  async function loadStatus() {
+    var result = await api("/status");
+    var data = result.data || {};
+    var chips = [];
+    if (data.ok) {
+      chips.push('<span class="chip ' + (data.has_token ? "on" : "off") + '">账号 <b>'
+        + (data.has_token ? "已配置" : "缺失") + '</b></span>');
+      chips.push('<span class="chip chip-opt">设备 <b>' + esc(data.device_name || "—") + '</b></span>');
+      chips.push('<span class="chip ' + (data.allow_submit ? "on" : "off") + '">真实提交 <b>'
+        + (data.allow_submit ? "已开启" : "已关闭") + '</b></span>');
+      var retention = data.retention || {};
+      chips.push('<span class="chip chip-opt">保留 <b>' + retention.runs_now + '/' + retention.keep_runs
+        + '</b> 轨迹 · <b>' + retention.tasklists_now + '/' + retention.keep_tasklists + '</b> 打表'
+        + (retention.leftover_dirs
+            ? '<span class="muted"> · +' + retention.leftover_dirs + ' 个残留空目录</span>' : '')
+        + '</span>');
+      chips.push('<span class="chip chip-opt">默认校区 <b>' + esc((data.console || {}).campus || "else") + '</b></span>');
+      chips.push('<span class="chip chip-opt">主机 <b>' + esc(data.school_host || "—") + '</b></span>');
+      var face = data.face || {};
+      chips.push('<span class="chip ' + (face.configured ? "on" : "off") + '">人脸源 <b>'
+        + (face.configured ? "已配置（" + esc(face.photo || "?") + "）" : "未配置")
+        + '</b></span>');
+    } else {
+      chips.push('<span class="chip off">桥接不可用：<b>' + esc(errText(data)) + '</b></span>');
+    }
+    $("chips").innerHTML = chips.join("");
+  }
+
+  // ---------------------------------------------------------------- pending
+  async function loadPending() {
+    var result = await api("/pending");
+    var data = result.data || {};
+    var list = (data.pending || []);
+    state.pending = list.length ? list[list.length - 1] : null;
+    state.activeRun = data.active_run || null;
+    var ready = $("ready");
+    ready.className = "hintbox";
+    // A run in flight outranks everything else on this panel: it is the state that
+    // matters, and it may have been started from the bot rather than this page.
+    if (state.activeRun && state.activeRun.status === "lost") {
+      ready.innerHTML = '<b class="bad-text">这次执行失联了：</b>发起它的进程已经退出，'
+        + "结果无法确认（可能只上传了一部分）。请先到 App 里核对成绩。"
+        + '<div class="small muted" style="margin-top:4px">token '
+        + esc(state.activeRun.token || "—") + " · 已运行 " + esc(state.activeRun.elapsed_seconds) + "s</div>"
+        + '<div style="margin-top:8px"><button class="ghost" id="btn-forget-lost">'
+        + "已核对过，清掉这个状态</button></div>";
+      $("btn-review").disabled = true;
+      $("btn-dry").disabled = true;
+      $("btn-abort").disabled = true;
+      var forgetBtn = $("btn-forget-lost");
+      if (forgetBtn) { forgetBtn.addEventListener("click", forgetLost); }
+      return;
+    }
+    if (state.activeRun && state.activeRun.status === "running") {
+      ready.innerHTML = '<b>正在执行：</b>'
+        + (state.activeRun.dry_run ? "演练（不联网）" : "真实提交（打表模式）")
+        + " · 已运行 " + state.activeRun.elapsed_seconds + "s · 日志 "
+        + esc(state.activeRun.line_count) + " 行 · token " + esc(state.activeRun.token || "—")
+        + '<div class="small muted" style="margin-top:4px">'
+        + "记录要按用时走完才会出成绩；中止会停在下一批之间，不会提交完整成绩。</div>";
+      $("btn-review").disabled = true;
+      $("btn-dry").disabled = true;
+      $("btn-abort").disabled = false;
+      $("btn-abort").textContent = "中止正在执行的跑步";
+      return;
+    }
+    $("btn-abort").textContent = "取消待执行";
+    if (!state.pending) {
+      ready.className = "hintbox is-empty";
+      ready.innerHTML = '<div class="run-empty">' + Studio.icon("empty")
+        + "<b>还没有待开跑的轨迹</b>"
+        + '<div class="small">先在左侧「生成一版轨迹并出卡」，核对卡片后再确认开跑。</div></div>';
+      $("btn-review").disabled = true;
+      $("btn-dry").disabled = true;
+      $("btn-abort").disabled = true;
+      return;
+    }
+    var p = state.pending;
+    var face = p.face || {};
+    var faceBadge = "";
+    if (face.required) {
+      faceBadge = face.ready
+        ? ' <span class="ok-text">［人脸核验·照片已就绪］</span>'
+        : ' <span class="bad-text">［人脸核验·未配置照片！确认后会在开始前被拒］</span>';
+    }
+    ready.innerHTML = '<b>待执行：</b>' + fmt(p.distance_km, 2, " km") + " · "
+      + fmt(p.duration_min, 1, " min") + " · 步频 " + (p.cadence || "—")
+      + " · " + esc(p.point_count || "—") + " 点 · 校区 " + esc(p.campus || "—") + faceBadge
+      + (p.card_exists ? "" : ' <span class="bad-text">（卡片缺失，须重新生成）</span>')
+      + '<div class="small muted" style="margin-top:4px">token ' + esc(p.token || "") + "</div>";
+    $("btn-review").disabled = false;
+    $("btn-dry").disabled = false;
+    $("btn-abort").disabled = false;
+  }
+
+  // ---------------------------------------------------------------- runs
+  async function loadRuns() {
+    var result = await api("/simulations?limit=10");
+    var data = result.data || {};
+    var runs = data.simulations || [];
+    $("list-note").textContent = runs.length
+      ? "共 " + runs.length + " 条（更早的已在每次生成前自动剔除）" : "还没有轨迹";
+    var host = $("runs");
+    host.innerHTML = "";
+    runs.forEach(function (run) {
+      var node = document.createElement("div");
+      node.className = "run" + (state.selected === run.run_id ? " selected" : "");
+      var thumb = run.card_url
+        ? '<img src="' + esc(run.card_url) + '" alt="" loading="lazy">'
+        : '<img alt="">';
+      node.innerHTML = thumb
+        + '<div><b>' + fmt(run.distance_km, 2, " km") + " · " + fmt(run.duration_min, 1, " min")
+        + '</b><div class="meta">' + (run.point_count || "—") + " 点 · "
+        + (run.qualified === false ? '<span class="bad-text">口径外</span>'
+                                    : '<span class="ok-text">合格</span>')
+        + '</div><div class="id">' + esc(run.run_id) + "</div></div>"
+        + '<div class="small muted">查看</div>';
+      node.onclick = function () { selectRun(run.run_id); };
+      host.appendChild(node);
+    });
+  }
+
+  async function selectRun(runId) {
+    state.selected = runId;
+    var result = await api("/runs/" + encodeURIComponent(runId));
+    var data = result.data || {};
+    if (!data.ok) { toast("读取轨迹失败：" + errText(data), true); return; }
+    var plan = data.plan || {};
+    var series = data.series || {};
+    $("preview").innerHTML = '<img src="' + esc(data.card_url) + '" alt="轨迹卡片">'
+      + '<div class="cap">' + esc(runId) + " · 距离 " + fmt(plan.distance_km || series.distance_km, 2, " km")
+      + " · 用时 " + fmt(plan.duration_min, 1, " min") + " · 步频 " + (plan.cadence || "—")
+      + " · 步长 " + fmt(plan.stride_m, 3, " m") + " · 总步数 " + (plan.step_total || "—") + "</div>";
+    loadRuns();
+  }
+
+  // ---------------------------------------------------------------- generate
+  async function generate() {
+    var button = $("btn-generate");
+    button.disabled = true;
+    button.textContent = "生成中…";
+    try {
+      var payload = { candidates: Number($("gen-candidates").value || 8) };
+      if ($("gen-seed").value.trim()) { payload.seed = Number($("gen-seed").value.trim()); }
+      if ($("gen-distance").value.trim()) { payload.distance_km = Number($("gen-distance").value.trim()); }
+      if ($("gen-pace").value.trim()) { payload.pace_min_per_km = Number($("gen-pace").value.trim()); }
+      var result = await post("/generate", payload);
+      if (!result.data.ok) { toast("生成失败：" + errText(result.data), true); return; }
+      var prepared = result.data.prepared || {};
+      toast("已生成 " + fmt(prepared.distance_km, 2, " km") + " / "
+        + fmt(prepared.duration_min, 1, " min") + "，请核对后开跑");
+      await Promise.all([loadRuns(), loadPending(), loadStatus()]);
+      if (result.data.card && result.data.card.run_id) { selectRun(result.data.card.run_id); }
+    } finally {
+      button.disabled = false;
+      button.textContent = "生成一版轨迹并出卡";
+    }
+  }
+
+  // ---------------------------------------------------------------- run
+  function openModal() {
+    var p = state.pending;
+    if (!p) { toast("没有待执行的轨迹", true); return; }
+    $("modal-sub").textContent = "打表模式 · 校区 " + (p.campus || "—") + " · token " + (p.token || "");
+    $("modal-card").src = API + "/runs/" + encodeURIComponent(p.card_run_id || "") + "/card.png";
+    if (p.run_id) { $("modal-card").src = API + "/runs/" + encodeURIComponent(p.run_id) + "/card.png"; }
+    var face = p.face || {};
+    var faceText = (face.known === false) ? "未知（服务端不可达）"
+      : (!face.required ? "该任务未启用（纯打表）"
+        : (face.ready ? "需要核验 · 照片已就绪" : "需要核验 · ⚠ 未配置照片"));
+    var rows = [
+      ["距离", fmt(p.distance_km, 2, " km")],
+      ["用时", fmt(p.duration_min, 1, " min")],
+      ["配速", fmt(p.pace_min_per_km, 2, " min/km")],
+      ["步频", p.cadence || "—"],
+      ["步长", fmt(p.stride_m, 3, " m")],
+      ["点数", p.point_count || "—"],
+      ["校区", esc(p.campus || "—")],
+      ["人脸", faceText]
+    ];
+    $("modal-kv").innerHTML = rows.map(function (row) {
+      return "<dt>" + row[0] + "</dt><dd>" + row[1] + "</dd>";
+    }).join("");
+    var faceWarnBox = $("modal-face-warn");
+    if (faceWarnBox) {
+      faceWarnBox.hidden = !face.warning;
+      faceWarnBox.textContent = face.warning || "";
+    }
+    $("modal").className = "modal open";
+  }
+  function closeModal() { $("modal").className = "modal"; }
+
+  async function forgetLost() {
+    var result = await api("/forget-lost", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}"
+    });
+    if (!result.data.ok) { toast("清理失败：" + errText(result.data), true); return; }
+    toast("已清掉失联状态，可以重新准备一次");
+    state.activeRun = null;
+    state.jobId = null;
+    await loadPending();
+    await loadStatus();
+  }
+
+  async function startRun(dryRun) {
+    var p = state.pending;
+    if (!p) { toast("没有待执行的轨迹", true); return; }
+    // 卡片是提交前唯一的人工核对入口。图没出来（缺 Edge/Chrome、底图拉不到、渲染失败）
+    // 就只允许演练，不许真提交——否则「确认前必须看卡片」在代码里只是一句话。
+    if (!dryRun && !p.card_exists) {
+      closeModal();
+      toast("这一版没有卡片（缺 Edge/Chrome 或渲染失败）。先修好再开跑；只想看链路可以点演练", true);
+      return;
+    }
+    closeModal();
+    $("log").textContent = "";
+    state.since = 0;
+    setJobState("running", dryRun ? "演练中" : "执行中");
+    var result = await post("/run", { token: p.token, confirmed: true, dry_run: !!dryRun });
+    if (!result.data.ok) {
+      setJobState("failed", "未开始");
+      appendLog("✗ " + errText(result.data), "l-err");
+      toast("无法开始：" + errText(result.data), true);
+      return;
+    }
+    state.jobId = result.data.job_id;
+    pollJob();
+  }
+
+  function setJobState(kind, text) {
+    var node = $("job-state");
+    node.className = "state " + kind;
+    node.textContent = text;
+  }
+  function appendLog(line, cls) {
+    var log = $("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = line + "\n";
+    log.appendChild(span);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  async function pollJob() {
+    if (!state.jobId) { return; }
+    var result = await api("/jobs/" + state.jobId + "?since=" + state.since);
+    var data = result.data || {};
+    if (!data.ok) {
+      setJobState("failed", "任务丢失");
+      toast("任务状态读取失败：" + errText(data), true);
+      return;
+    }
+    (data.lines || []).forEach(function (line) {
+      var cls = /失败|错误|✗|Error|Traceback/.test(line) ? "l-err"
+        : /成功|完成|✓/.test(line) ? "l-ok" : "";
+      appendLog(line, cls);
+    });
+    state.since = data.total_lines;
+    $("job-foot").textContent = "已运行 " + data.elapsed_s + "s · " + data.total_lines + " 行日志"
+      + (data.dry_run ? " · 演练（不联网）" : " · 真实提交");
+    if (data.status === "running") {
+      setJobState("running", data.dry_run ? "演练中" : "执行中");
+      state.polling = setTimeout(pollJob, 1200);
+      return;
+    }
+    var ok = data.status === "done";
+    var aborted = data.status === "aborted";
+    setJobState(ok ? "done" : "failed", ok ? "完成" : (aborted ? "已中止" : "失败"));
+    var payload = data.result || {};
+    if (ok) {
+      appendLog("✓ 结束，记录号 " + (payload.record_id || "—"), "l-ok");
+      toast("跑步完成");
+    } else {
+      appendLog((aborted ? "🛑 " : "✗ ") + errText(payload), "l-err");
+      toast(aborted ? "已中止（未提交完整成绩）" : "执行失败：" + errText(payload), true);
+    }
+    (payload.output_tail || "").split("\n").slice(-12).forEach(function (line) {
+      if (line.trim()) { appendLog(line, "l-dim"); }
+    });
+    state.jobId = null;
+    state.since = 0;
+    loadPending();
+    loadStatus();
+  }
+
+  async function abort() {
+    // One button, two meanings, decided by what is actually happening: a run in flight
+    // has to be stopped at the source, while a mere pending token only needs dropping.
+    var active = (state.activeRun && state.activeRun.status === "running") ? state.activeRun : null;
+    if (active) {
+      if (!confirm("正在执行的跑步将被中止（不执行 finish）。确定？")) { return; }
+      var stopped = await post("/abort", { token: state.pending ? state.pending.token : "" });
+      toast(stopped.data.ok ? "已发出中止信号" : errText(stopped.data), !stopped.data.ok);
+      return;
+    }
+    if (!state.pending) { toast("没有待开跑的轨迹"); return; }
+    var result = await post("/cancel", { token: state.pending.token });
+    if (result.data.ok) { toast("已取消待执行的记录"); } else { toast(errText(result.data), true); }
+    loadPending();
+  }
+
+  $("btn-generate").onclick = generate;
+  $("btn-refresh").onclick = function () { loadRuns(); loadStatus(); };
+  $("btn-review").onclick = openModal;
+  $("btn-dry").onclick = function () { startRun(true); };
+  $("btn-confirm-run").onclick = function () { startRun(false); };
+  $("btn-cancel-modal").onclick = closeModal;
+  $("btn-abort").onclick = abort;
+  $("modal").onclick = function (event) { if (event.target === $("modal")) { closeModal(); } };
+
+  loadStatus();
+  loadRuns();
+  loadPending();
+  // Keep the header fresh; the run itself is driven by the job poll.
+  setInterval(function () { if (!state.jobId) { loadStatus(); loadPending(); } }, 15000);
+})();
+</script>
+<script>
+(function () {
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("yunrun-theme", theme); } catch (e) {}
+  }
+  var saved = null;
+  try { saved = localStorage.getItem("yunrun-theme"); } catch (e) {}
+  applyTheme(saved || "light");
+  var btn = document.getElementById("theme-btn");
+  if (btn) { btn.addEventListener("click", function () {
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  }); }
+})();
+</script>
+</body>
+</html>

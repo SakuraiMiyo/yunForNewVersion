@@ -1,5 +1,54 @@
+# 个人数据与构建产物——绝不入库
+#
+# ⚠ git 的规则：pattern 中间或开头带 `/` 时，会被锚定到本文件所在目录（仓库根）。
+# 本项目的业务代码在 yunrun/ 下，所以嵌套路径一律用 `**/` 前缀，
+# 否则规则会**静默失效**。（已实测踩过：人脸照片目录、操场标定、jar 都差点被提交）
+
+# ── 上游原有的规则（保持原样，别删）──
 __pycache__
 t.py
 cfg_my.ini
 t.ipynb
 show.json
+
+# ── 配置与登录态（含 token / 学校信息）──
+# 注意：仓库根目录那份 config.ini 是**上游作者提交的样例**，已经被 git 跟踪，
+# 这行规则管不到它。要填自己的 token 请改 yunrun/config.ini（由下面的
+# yunrun/.gitignore 拦住），不要动根目录那份。
+config.ini
+config.ini.bak*
+
+# ── 本人数据（人脸照片、真实历史轨迹、生成物）──
+**/data/face_library/
+**/tasks_else/
+**/tasks_sim/
+**/gps_track_lab/runs/
+**/gps_track_lab/config/track.json
+**/history/
+
+# ── 第三方资产 ──
+# 人脸检测模型随仓库分发（不然人脸库开箱不能用）；其它朝大的模型（如 13 MB 的 w600k_mbf.onnx）不入库
+**/models/*
+!yunrun/models/retinaface_mv1_0.25.onnx
+**/data/schools.json
+**/tools/*.jar
+# 渲染出来的卡片 PNG 内嵌真实卫星瓦片，别顺手提交
+**/track_card/*.png
+
+# ── 本地工具链（调试截图、临时中转）──
+/_local/
+
+# ── macOS 源码直跑用的本地虚拟环境 ──
+.venv-mac/
+
+# ── 缓存 ──
+*.pyc
+.pytest_cache/
+
+# ── 运行时缓存与归档（瓦片缓存 / retention 的 _stale）──
+**/tile_cache/
+**/_stale/
+
+# ── 配置写入的临时文件：唯一名 + finally 清理，但崩溃仍可能残留，里面是明文 token ──
+**/config.ini.tmp
+**/.config-*.tmp

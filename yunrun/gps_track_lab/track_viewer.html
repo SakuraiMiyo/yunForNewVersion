@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="本地 GPS 轨迹仿真、质量检查与地图回放工具">
+<title>云运动 · 轨迹实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { color-scheme: dark; --panel:#151922; --card:#202632; --line:#343e50; --muted:#9aa6ba; --text:#e8edf5; --accent:#7c6cff; --cyan:#34d6c7; --danger:#ff6b7a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font: 16px/1.45 "Segoe UI", "Microsoft YaHei", sans-serif; background:#0d1016; color:var(--text); }
+  #layout { display: flex; height: 100%; }
+  #sidebar { width: 410px; min-width: 410px; overflow-y: auto; background:var(--panel); color:var(--text); padding:18px; border-right:1px solid #293142; }
+  #map { flex: 1; }
+  h1 { font-size:1.15rem; margin:0; color:#fff; letter-spacing:.01em; }
+  h2 { font-size:.9rem; margin:0 0 10px; color:#fff; }
+  .sub { font-size:.8rem; color:var(--muted); margin:3px 0 14px; }
+  .local-badge { display:inline-flex; align-items:center; gap:6px; color:var(--cyan); font-size:.75rem; font-weight:700; letter-spacing:.05em; }
+  .local-badge::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 12px var(--cyan); }
+  .panel { background:linear-gradient(145deg,#202633,#1b202b); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; box-shadow:0 12px 30px rgba(0,0,0,.16); }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field { display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .field label { color:#b9c2d2; font-size:.82rem; }
+  input[type="number"] { width:100%; background:#121722; color:#fff; border:1px solid #39455b; border-radius:8px; padding:8px 9px; font:inherit; font-size:.88rem; outline:none; }
+  input[type="number"]:focus, select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(124,108,255,.18); }
+  .primary { width:100%; min-height:42px; margin-top:12px; border:0; border-radius:9px; color:#fff; font-size:.92rem; font-weight:750; background:linear-gradient(110deg,var(--accent),#4f9cf9); box-shadow:0 8px 22px rgba(86,102,255,.25); }
+  .primary:hover { filter:brightness(1.08); background:linear-gradient(110deg,var(--accent),#4f9cf9); }
+  .primary:disabled { opacity:.55; cursor:wait; }
+  #generation-status { min-height:21px; margin-top:9px; color:var(--muted); font-size:.8rem; }
+  #generation-status.ok { color:var(--cyan); }
+  #generation-status.error { color:var(--danger); }
+  .metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:10px; }
+  .metric { background:#131925; border:1px solid #2d3749; border-radius:9px; padding:8px; }
+  .metric strong { display:block; font-size:.92rem; color:#fff; }
+  .metric span { display:block; font-size:.68rem; color:var(--muted); margin-top:1px; }
+  .download-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+  .download-row a { color:#cfd7ff; border:1px solid #43506a; border-radius:7px; padding:4px 8px; text-decoration:none; font-size:.76rem; }
+  details { margin-top:10px; color:var(--muted); font-size:.78rem; }
+  details summary { cursor:pointer; user-select:none; }
+  #dropzone { border:2px dashed #3a4356; border-radius:10px; padding:12px 10px; text-align:center; font-size:.8rem; color:var(--muted); margin-bottom:10px; transition:.15s; }
+  #dropzone.hover { border-color: #4f9cf9; background: #1d2735; color: #cfe2ff; }
+  .filecard { background:var(--card); border:1px solid #2f3849; border-radius:9px; padding:9px 10px; margin-bottom:8px; font-size:.78rem; }
+  .filecard .name { font-weight: 600; color: #fff; word-break: break-all; cursor: pointer; }
+  .filecard .stats { color: #9aa4b5; margin-top: 4px; line-height: 1.6; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+  .controls { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  button, select { background:#2b3443; color:#e0e6ef; border:1px solid #3a465a; border-radius:7px; padding:5px 10px; font-size:.78rem; cursor:pointer; }
+  button:hover { background: #3a4656; }
+  .row { display:flex; gap:8px; margin:8px 0; font-size:.82rem; align-items:center; }
+  #playinfo { font-size: 12px; color: #7fd18a; margin-top: 6px; min-height: 16px; }
+  .empty { color:#748097; font-size:.78rem; padding:8px 4px; }
+  label.chk { display:flex; gap:6px; align-items:center; font-size:.78rem; color:var(--muted); cursor:pointer; }
+  .section-label { margin:12px 0 7px; color:#b8c2d4; font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+  @media (max-width: 760px) {
+    #layout { flex-direction:column; height:auto; min-height:100%; }
+    #sidebar { width:100%; min-width:0; max-height:none; border-right:0; border-bottom:1px solid #293142; }
+    #map { height:58vh; min-height:420px; }
+  }
+</style>
+<!-- STUDIO_STYLE -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%2711%27 fill=%27%231e392e%27/%3E%3Cpath d=%27M22 6 11 23h9l-2 11 12-18h-9z%27 fill=%27%23d8ed92%27/%3E%3C/svg%3E">
+</head>
+<body class="viewer-page">
+<div id="layout">
+  <div id="sidebar">
+    <a class="viewer-back" href="/admin">← 返回工作空间</a><div class="local-badge">TRACK LAB / LOCAL SIMULATION</div>
+    <h1>轨迹实验室<span class="viewer-theme"><button id="theme-btn" aria-label="切换浅色与深色主题" data-icon="moon"></button></span></h1>
+    <div class="sub">生成、检查与回放。让每一条轨迹清晰可见。</div>
+    <section class="panel" aria-labelledby="generator-title">
+      <h2 id="generator-title">一键生成新轨迹</h2>
+      <form id="generator-form">
+        <div class="form-grid">
+          <div class="field"><label for="distance">目标距离（km）</label><input id="distance" name="distance_km" type="number" min="0.1" max="50" step="0.01" value="3.05" required></div>
+          <div class="field"><label for="pace">目标配速（min/km）</label><input id="pace" name="pace_min_per_km" type="number" min="2" max="30" step="0.1" value="6.0" required></div>
+          <div class="field"><label for="candidates">候选数量</label><input id="candidates" name="candidates" type="number" min="1" max="100" step="1" value="8" required></div>
+          <div class="field"><label for="seed">随机种子（可选）</label><input id="seed" name="seed" type="number" min="0" step="1" placeholder="每次随机"></div>
+        </div>
+        <details>
+          <summary>高级传感器参数</summary>
+          <div class="form-grid" style="margin-top:9px">
+            <div class="field"><label for="sample-interval">采样间隔（秒）</label><input id="sample-interval" type="number" min="0.2" max="30" step="0.1" value="2.0"></div>
+            <div class="field"><label for="gps-sigma">GPS 漂移 σ（米）</label><input id="gps-sigma" type="number" min="0" max="50" step="0.1" value="1.8"></div>
+            <div class="field"><label for="white-noise">白噪声 σ（米）</label><input id="white-noise" type="number" min="0" max="20" step="0.05" value="0.35"></div>
+            <div class="field"><label for="dropout">丢点概率</label><input id="dropout" type="number" min="0" max="0.49" step="0.001" value="0.005"></div>
+          </div>
+        </details>
+        <button class="primary" id="generate-btn" type="submit">生成并显示</button>
+        <div id="generation-status" role="status" aria-live="polite">正在连接本地模拟后端…</div>
+      </form>
+      <div id="result-summary" hidden>
+        <div class="metrics">
+          <div class="metric"><strong id="metric-distance">—</strong><span>模型距离</span></div>
+          <div class="metric"><strong id="metric-duration">—</strong><span>模拟时长</span></div>
+          <div class="metric"><strong id="metric-valid">—</strong><span>有效候选</span></div>
+          <div class="metric"><strong id="metric-points">—</strong><span>采样点</span></div>
+          <div class="metric"><strong id="metric-speed">—</strong><span>最大观测速度</span></div>
+          <div class="metric"><strong id="metric-latency">—</strong><span>平均延迟</span></div>
+        </div>
+        <div class="download-row" id="downloads"></div>
+      </div>
+    </section>
+    <div class="section-label">导入与地图</div>
+    <div class="sub">也可以拖入 track.csv / GeoJSON / 历史 tasklist 或标定文件</div>
+    <div id="dropzone">拖拽文件或文件夹到这里<br><br><button onclick="document.getElementById('fileinput').click()">选择文件</button>
+      <input id="fileinput" type="file" multiple accept=".csv,.json,.geojson" style="display:none">
+    </div>
+    <div class="row">
+      底图
+      <select id="basemap">
+        <option value="amap">高德（GCJ-02，无需纠偏）</option>
+        <option value="osm">OpenStreetMap（自动纠偏到 WGS-84）</option>
+      </select>
+      <button id="fitbtn" title="视野回到全部轨迹">🎯 回到轨迹</button>
+    </div>
+    <div id="serverload" style="font-size:.78rem;color:#9aa4b5;margin:4px 0"></div>
+    <div id="runlist" style="margin-bottom:8px"></div>
+    <div id="playback" style="display:none">
+      <div class="row">
+        ▶ 回放 <select id="playspeed"><option value="1">1×</option><option value="5" selected>5×</option><option value="20">20×</option><option value="60">60×</option></select>
+        <button id="playbtn">播放</button>
+        <input type="range" id="scrubber" min="0" max="100" value="0" style="flex:1">
+      </div>
+      <div id="playinfo"></div>
+    </div>
+    <div id="filelist"><div class="empty">尚未加载轨迹</div></div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<!-- STUDIO_SCRIPT -->
+<script>try { document.documentElement.dataset.theme = localStorage.getItem("yunrun-theme") || "light"; } catch(e) {} document.getElementById("theme-btn").onclick = function() { var theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = theme; try { localStorage.setItem("yunrun-theme", theme); } catch(e) {} };</script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+
+/* ---------------- GCJ-02 <-> WGS-84 ---------------- */
+function transformLat(x, y) {
+  const ret = -100.0 + 2.0*x + 3.0*y + 0.2*y*y + 0.1*x*y + 0.2*Math.sqrt(Math.abs(x));
+  return ret + (20.0*Math.sin(6.0*x*Math.PI) + 20.0*Math.sin(2.0*x*Math.PI)) * 2.0/3.0
+       + (20.0*Math.sin(y*Math.PI) + 40.0*Math.sin(y/3.0*Math.PI)) * 2.0/3.0
+       + (160.0*Math.sin(y/12.0*Math.PI) + 320*Math.sin(y*Math.PI/30.0)) * 2.0/3.0;
+}
+function transformLng(x, y) {
+  const ret = 300.0 + x + 2.0*y + 0.1*x*x + 0.1*x*y + 0.1*Math.sqrt(Math.abs(x));
+  return ret + (20.0*Math.sin(6.0*x*Math.PI) + 20.0*Math.sin(2.0*x*Math.PI)) * 2.0/3.0
+       + (20.0*Math.sin(x*Math.PI) + 40.0*Math.sin(x/3.0*Math.PI)) * 2.0/3.0
+       + (150.0*Math.sin(x/12.0*Math.PI) + 300.0*Math.sin(x/30.0*Math.PI)) * 2.0/3.0;
+}
+function gcjToWgs(lng, lat) {
+  const a = 6378245.0, ee = 0.00669342162296594323;
+  let dLat = transformLat(lng - 105.0, lat - 35.0);
+  let dLng = transformLng(lng - 105.0, lat - 35.0);
+  const radLat = lat / 180.0 * Math.PI;
+  let magic = Math.sin(radLat); magic = 1 - ee * magic * magic;
+  const sqrtMagic = Math.sqrt(magic);
+  dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * Math.PI);
+  dLng = (dLng * 180.0) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
+  return [lng - dLng, lat - dLat]; // 近似逆变换（误差<1-2m，可视化足够）
+}
+function haversine(a, b) {
+  const R = 6371000, r = Math.PI/180;
+  const dLat = (b[1]-a[1])*r, dLng = (b[0]-a[0])*r;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function fmtPace(secPerKm) {
+  if (!isFinite(secPerKm) || secPerKm <= 0) return "—";
+  const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
+  return m + "'" + String(s).padStart(2, "0") + "\"/km";
+}
+
+/* ---------------- 地图 ---------------- */
+const amapLayer = L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}", { subdomains: "1234", maxZoom: 18, attribution: "高德地图" });
+const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "OpenStreetMap" });
+// 初始视野只是个占位，载入标定/轨迹后会自动 fitBounds 到实际数据
+const map = L.map("map", { preferCanvas: true }).setView([31.7700, 117.2002], 15);
+amapLayer.addTo(map);
+let useOffset = false; // 底图=OSM 时把 GCJ-02 轨迹纠偏到 WGS-84
+document.getElementById("basemap").addEventListener("change", e => {
+  if (e.target.value === "amap") { map.removeLayer(osmLayer); amapLayer.addTo(map); useOffset = false; }
+  else { map.removeLayer(amapLayer); osmLayer.addTo(map); useOffset = true; }
+  redrawAll();
+});
+const display = c => { const r = useOffset ? gcjToWgs(c[0], c[1]) : c; return [r[1], r[0]]; }; // 入参[经度,纬度]，出参[纬度,经度]（Leaflet 约定）
+
+/* ---------------- 数据模型 ---------------- */
+const PALETTE = ["#4f9cf9", "#f97316", "#22c55e", "#e11d48", "#a855f7", "#eab308", "#14b8a6", "#f472b6"];
+let layers = [];   // {name, color, coords:[], times:[], speeds:[], dists:[], layerGroup, visible}
+let models = [];   // 跑道标定模型叠加层
+
+function addTrack(name, coords, meta) {
+  if (coords.length < 2) return;
+  const color = PALETTE[layers.length % PALETTE.length];
+  const latlngs = coords.map(display);
+  const group = L.layerGroup().addTo(map);
+  L.polyline(latlngs, { color, weight: 3, opacity: .9 }).addTo(group)
+    .bindPopup(name + " · " + (meta.summary || ""));
+  L.circleMarker(latlngs[0], { radius: 6, color: "#22c55e", fillOpacity: 1 }).addTo(group).bindPopup("起点 · " + name);
+  L.circleMarker(latlngs[latlngs.length-1], { radius: 6, color: "#e11d48", fillOpacity: 1 }).addTo(group).bindPopup("终点 · " + name);
+  const entry = { name, color, coords, ...meta, layerGroup: group, visible: true };
+  layers.push(entry);
+  renderList();
+  fitAll();
+  return entry;
+}
+
+function addStadiumModel(name, m) {
+  // 直道+半圆弯道 中心线：heading 为直道方向，局部 x 沿直道、y 左侧为正
+  const Lh = m.straight_half_length_m, R = m.curve_radius_m;
+  const th = m.heading_degrees * Math.PI/180, cosT = Math.cos(th), sinT = Math.sin(th);
+  const mPerDegLat = 110540, mPerDegLng = 111320 * Math.cos(m.center_lat * Math.PI/180);
+  const toLL = (x, y) => [ m.center_lon + (x*cosT - y*sinT)/mPerDegLng, m.center_lat + (x*sinT + y*cosT)/mPerDegLat ];
+  const pts = [];
+  for (let x = -Lh; x < Lh; x += 2) pts.push(toLL(x,  R));                       // 上直道 →
+  for (let a = 90; a > -90; a -= 4) { const r = a*Math.PI/180; pts.push(toLL(Lh + R*Math.cos(r), R*Math.sin(r))); }   // 右弯道
+  for (let x = Lh; x > -Lh; x -= 2) pts.push(toLL(x, -R));                       // 下直道 ←
+  for (let a = -90; a > -270; a -= 4) { const r = a*Math.PI/180; pts.push(toLL(-Lh + R*Math.cos(r), R*Math.sin(r))); } // 左弯道
+  const line = makeModelLine(pts);
+  line.bindPopup(name + " · 标定跑道 一圈 " + m.lap_length_m.toFixed(0) + "m（拟合残差 " + m.fit_residual_m.toFixed(2) + "m）");
+  models.push(line);
+  renderList();
+  fitAll();
+  return line;
+}
+function makeModelLine(pts) {
+  const line = L.polyline(pts.map(display), { color: "#285d43", weight: 2, dashArray: "6 6", opacity: .85 });
+  line.userData = pts; // 始终保存 GCJ-02 原始坐标，供底图切换时重算
+  return line.addTo(map);
+}
+
+function fitAll() {
+  const pts = [];
+  layers.forEach(t => { if (t.visible) t.coords.forEach(c => pts.push(L.latLng(...display(c)))); });
+  models.forEach(m => pts.push(...m.getLatLngs()));
+  if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.15), { maxZoom: 18 });
+}
+document.getElementById("fitbtn").onclick = () => fitAll();
+
+/* ---------------- 从 HTTP 服务载入 runs/ 目录 ---------------- */
+async function loadFromServer(path, name) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error("载入失败：" + response.status);
+  const text = await response.text();
+  handleFile(new File([text], name));
+}
+async function scanLegacyServerRuns() {
+  const hint = document.getElementById("serverload");
+  // 目录名与图例颜色都进了 innerHTML / style 属性，拼之前先转义。
+  function esc(value) {
+    return String(value === null || value === undefined ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  if (!/^https?:$/.test(location.protocol)) { hint.textContent = "file:// 模式：请拖拽文件或文件夹"; return; }
+  try {
+    const doc = new DOMParser().parseFromString(await (await fetch("runs/")).text(), "text/html");
+    const dirs = [...doc.querySelectorAll("a")]
+      .map(a => a.getAttribute("href"))
+      .filter(h => h && h.endsWith("/") && h !== "/" && !h.startsWith(".."));
+    const box = document.getElementById("runlist");
+    if (!dirs.length) { hint.textContent = "runs/ 目录为空"; return; }
+    hint.textContent = "runs/ 目录（点击载入轨迹 + 跑道模型）：";
+    dirs.forEach(d => {
+      const name = d.replace(/\/+$/, "").split("/").pop();
+      const item = document.createElement("div");
+      item.className = "filecard";
+      item.innerHTML = `<span class="name">${esc(name)}</span><div class="controls"><button>载入</button></div>`;
+      const btn = item.querySelector("button");
+      btn.onclick = async () => {
+        btn.disabled = true; btn.textContent = "载入中…";
+        try {
+          const runBase = new URL(d, new URL("runs/", location.href)).href; // d 相对于 runs/ 索引
+          await loadFromServer(runBase + "track.csv", name + ".csv");
+          await loadFromServer(runBase + "manifest.json", name + "-manifest.json");
+          btn.textContent = "已载入";
+        } catch (e) { btn.disabled = false; btn.textContent = "载入失败"; console.error(e); }
+      };
+      box.appendChild(item);
+    });
+  } catch { hint.textContent = "（无法扫描 runs/，可直接拖拽文件）"; }
+}
+
+let apiReady = false;
+let calibrationLoaded = false;
+
+function setGenerationStatus(message, state) {
+  const status = document.getElementById("generation-status");
+  status.textContent = message;
+  status.className = state || "";
+}
+
+async function fetchJson(path, options) {
+  const response = await fetch(path, options);
+  let body = {};
+  try { body = await response.json(); } catch { /* handled using HTTP status */ }
+  if (!response.ok) throw new Error(body.error || ("请求失败：" + response.status));
+  return body;
+}
+
+function clearGeneratedTracks() {
+  const removed = layers.filter(track => track.generated);
+  removed.forEach(track => map.removeLayer(track.layerGroup));
+  layers = layers.filter(track => !track.generated);
+  if (selected && selected.generated) {
+    selected = null;
+    stopPlay();
+    if (playMarker) { map.removeLayer(playMarker); playMarker = null; }
+    document.getElementById("playback").style.display = "none";
+  }
+}
+
+function addGeneratedRun(result) {
+  clearGeneratedTracks();
+  const series = result.series;
+  const duration = Number(result.duration_seconds || 0);
+  const km = Number(result.modeled_distance_m || 0) / 1000;
+  const times = series.timestamps.map(value => new Date(value).getTime());
+  const laps = new Set(series.laps).size;
+  addTrack(result.run_id, series.coordinates, {
+    times: times,
+    speeds: series.speeds_mps,
+    dists: series.distances_m,
+    generated: true,
+    runId: result.run_id,
+    summary: km.toFixed(3) + "km · " + Math.floor(duration/60) + "分" + Math.round(duration%60) + "秒 · " + fmtPace(duration/km) + " · " + laps + "圈"
+  });
+
+  const quality = result.quality || {};
+  document.getElementById("metric-distance").textContent = km.toFixed(3) + " km";
+  document.getElementById("metric-duration").textContent = Math.floor(duration/60) + "分" + Math.round(duration%60) + "秒";
+  document.getElementById("metric-valid").textContent = String(quality.valid_candidate_count || 0) + "/" + String(quality.candidate_count || 0);
+  document.getElementById("metric-points").textContent = String(result.point_count || 0);
+  document.getElementById("metric-speed").textContent = quality.max_observed_speed_mps == null ? "—" : (quality.max_observed_speed_mps * 3.6).toFixed(1) + " km/h";
+  document.getElementById("metric-latency").textContent = quality.mean_reporting_latency_ms == null ? "—" : Math.round(quality.mean_reporting_latency_ms) + " ms";
+  document.getElementById("result-summary").hidden = false;
+
+  const downloads = document.getElementById("downloads");
+  downloads.innerHTML = "";
+  [["CSV", result.downloads.csv], ["GeoJSON", result.downloads.geojson], ["质量报告", result.downloads.manifest]].forEach(([label, href]) => {
+    const link = document.createElement("a");
+    link.href = href;
+    link.textContent = "下载 " + label;
+    downloads.appendChild(link);
+  });
+}
+
+async function loadApiRun(runId, button) {
+  if (button) { button.disabled = true; button.textContent = "载入中…"; }
+  try {
+    addGeneratedRun(await fetchJson("/api/runs/" + encodeURIComponent(runId)));
+    setGenerationStatus("已载入 " + runId, "ok");
+  } catch (error) {
+    setGenerationStatus(error.message, "error");
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "载入"; }
+  }
+}
+
+function renderRunHistory(runs) {
+  const box = document.getElementById("runlist");
+  box.innerHTML = "";
+  if (!runs.length) {
+    box.innerHTML = '<div class="empty">还没有本地生成记录</div>';
+    return;
+  }
+  runs.slice(0, 12).forEach(run => {
+    const item = document.createElement("div");
+    item.className = "filecard";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = run.run_id;
+    const stats = document.createElement("div");
+    stats.className = "stats";
+    const distanceText = run.modeled_distance_m ? (run.modeled_distance_m / 1000).toFixed(3) + " km · " : "";
+    stats.textContent = distanceText + String(run.point_count || "?") + " 点 · seed " + String(run.seed || "?") + " · " + (run.valid ? "检查通过" : "待检查");
+    const controls = document.createElement("div");
+    controls.className = "controls";
+    const button = document.createElement("button");
+    button.textContent = "载入";
+    button.onclick = () => loadApiRun(run.run_id, button);
+    controls.appendChild(button);
+    item.append(name, stats, controls);
+    box.appendChild(item);
+  });
+}
+
+async function scanServerRuns() {
+  const hint = document.getElementById("serverload");
+  const generateButton = document.getElementById("generate-btn");
+  if (!/^https?:$/.test(location.protocol)) {
+    hint.textContent = "file:// 模式：请用 launcher.py 或 start_admin.bat 启动本地服务";
+    generateButton.disabled = true;
+    setGenerationStatus("未连接本地后端，请用 launcher.py 或 start_admin.bat 启动。", "error");
+    return;
+  }
+  try {
+    const state = await fetchJson("/api/state");
+    apiReady = true;
+    generateButton.disabled = false;
+    document.getElementById("distance").value = state.defaults.distance_km;
+    document.getElementById("pace").value = state.defaults.pace_min_per_km;
+    document.getElementById("candidates").value = state.defaults.candidates;
+    document.getElementById("sample-interval").value = state.settings.sample_interval_seconds;
+    document.getElementById("gps-sigma").value = state.settings.gps_sigma_m;
+    document.getElementById("white-noise").value = state.settings.white_noise_sigma_m;
+    document.getElementById("dropout").value = state.settings.dropout_probability;
+    if (!calibrationLoaded) {
+      if (state.calibration) addStadiumModel("当前标定模型", state.calibration);
+      calibrationLoaded = true;
+    }
+    renderRunHistory(state.runs || []);
+    hint.textContent = "最近生成记录";
+    if (state.calibration_error) {
+      setGenerationStatus(state.calibration_error, "");
+    } else {
+      setGenerationStatus("本地模拟后端已就绪。", "ok");
+    }
+  } catch (error) {
+    generateButton.disabled = true;
+    hint.textContent = "无法读取生成记录";
+    setGenerationStatus("连接后端失败：" + error.message, "error");
+  }
+}
+
+function redrawAll() {
+  layers.forEach(t => {
+    map.removeLayer(t.layerGroup);
+    const latlngs = t.coords.map(display);
+    const group = L.layerGroup().addTo(map);
+    L.polyline(latlngs, { color: t.color, weight: 3, opacity: .9 }).addTo(group).bindPopup(t.name);
+    L.circleMarker(latlngs[0], { radius: 6, color: "#22c55e", fillOpacity: 1 }).addTo(group);
+    L.circleMarker(latlngs[latlngs.length-1], { radius: 6, color: "#e11d48", fillOpacity: 1 }).addTo(group);
+    t.layerGroup = group;
+  });
+  models = models.map(old => {
+    const pts = old.userData; // GCJ-02 原始坐标
+    const popup = old.getPopup();
+    map.removeLayer(old);
+    const line = makeModelLine(pts);
+    if (popup) line.bindPopup(popup.getContent());
+    return line;
+  });
+}
+
+/* ---------------- 文件解析 ---------------- */
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return null;
+  const header = lines[0].split(",").map(s => s.trim());
+  const idx = n => header.indexOf(n);
+  if (idx("longitude") < 0 || idx("latitude") < 0) return null;
+  const coords = [], times = [], speeds = [], dists = [], laps = new Set();
+  for (let i = 1; i < lines.length; i++) {
+    const v = lines[i].split(",");
+    const lon = parseFloat(v[idx("longitude")]), lat = parseFloat(v[idx("latitude")]);
+    if (!isFinite(lon) || !isFinite(lat)) continue;
+    coords.push([lon, lat]);
+    if (idx("timestamp") >= 0) times.push(new Date(v[idx("timestamp")]).getTime());
+    if (idx("modeled_speed_mps") >= 0) speeds.push(parseFloat(v[idx("modeled_speed_mps")]));
+    if (idx("modeled_distance_m") >= 0) dists.push(parseFloat(v[idx("modeled_distance_m")]));
+    if (idx("lap") >= 0) laps.add(v[idx("lap")]);
+  }
+  const km = dists.length ? dists[dists.length-1]/1000 : coords.reduce((s, c, i) => i ? s + haversine(coords[i-1], c) : 0, 0)/1000;
+  const dur = times.length > 1 ? (times[times.length-1] - times[0])/1000 : NaN;
+  return { coords, times, speeds, dists, laps: laps.size, km, dur };
+}
+
+function handleFile(file) {
+  const name = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    try {
+      if (/\.csv$/i.test(name)) {
+        const t = parseCsv(text);
+        if (t) addTrack(name, t.coords, {
+          times: t.times, speeds: t.speeds, dists: t.dists,
+          summary: `${t.km.toFixed(2)}km · ${isFinite(t.dur) ? Math.round(t.dur/60) + "分" + Math.round(t.dur%60) + "秒" : "—"} · ${fmtPace(t.dur/t.km)} · ${t.laps}圈`
+        });
+        return;
+      }
+      const j = JSON.parse(text);
+      const calib = j.calibration || (j.model === "stadium-centerline" ? j : null);
+      if (calib && calib.center_lon !== undefined) {
+        addStadiumModel(name + (j.calibration ? "（manifest）" : ""), calib);
+        return;
+      }
+      if (j.data && j.data.pointsList) { // 云运动 tasklist
+        const coords = j.data.pointsList.map(p => p.point.split(",").map(Number));
+        const km = parseFloat(j.data.recordMileage) || 0, dur = parseFloat(j.data.duration) || 0;
+        addTrack(name, coords, { summary: `${km}km · ${Math.round(dur/60)}分${Math.round(dur%60)}秒 · 配速${j.data.recodePace} · 原始表` });
+        return;
+      }
+      if (j.type === "FeatureCollection") { // track.geojson
+        const f = j.features.find(f => f.geometry && f.geometry.type === "LineString");
+        if (f) {
+          const coords = f.geometry.coordinates;
+          const km = coords.reduce((s, c, i) => i ? s + haversine(coords[i-1], c) : 0, 0)/1000;
+          addTrack(name, coords, { summary: `${km.toFixed(2)}km · ${coords.length}点 · seed ${j.properties && j.properties.seed || "?"}` });
+        }
+      }
+    } catch (err) { console.error(name, err); }
+  };
+  reader.readAsText(file);
+}
+
+/* 拖拽：支持文件与文件夹 */
+const dz = document.getElementById("dropzone");
+dz.addEventListener("click", e => { if (e.target.tagName !== "BUTTON") document.getElementById("fileinput").click(); });
+document.getElementById("fileinput").addEventListener("change", e => [...e.target.files].forEach(handleFile));
+["dragover", "dragenter"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("hover"); }));
+["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("hover"); }));
+dz.addEventListener("drop", e => {
+  const items = e.dataTransfer.items;
+  if (items && items.length && items[0].webkitGetAsEntry) {
+    for (const it of items) {
+      const entry = it.webkitGetAsEntry();
+      if (entry) walkEntry(entry);
+    }
+  } else [...e.dataTransfer.files].forEach(handleFile);
+});
+function walkEntry(entry, path) {
+  path = path || "";
+  if (entry.isFile) entry.file(f => { f.name = path + f.name; handleFile(f); });
+  else if (entry.isDirectory) {
+    const reader = entry.createReader();
+    reader.readEntries(entries => entries.forEach(en => walkEntry(en, path + entry.name + "/")));
+  }
+}
+
+/* ---------------- 侧栏列表与回放 ---------------- */
+let selected = null, playTimer = null, playMarker = null, playIdx = 0;
+function renderList() {
+  const box = document.getElementById("filelist");
+  if (!layers.length && !models.length) return;
+  box.innerHTML = "";
+  layers.forEach((t, i) => {
+    const div = document.createElement("div");
+    div.className = "filecard";
+    div.innerHTML = `<span class="swatch" style="background:${esc(t.color)}"></span>
+      <span class="name">${t.name}</span>
+      <div class="stats">${t.summary || ""} · ${t.coords.length}点
+      ${t.times && t.times.length ? ' · <span style="color:#7fd18a">可回放</span>' : ""}</div>
+      <div class="controls">
+        <button data-a="toggle">${t.visible ? "隐藏" : "显示"}</button>
+        <button data-a="zoom">缩放</button>
+        <button data-a="del">移除</button>
+        ${t.times && t.times.length ? `<button data-a="play">回放</button>` : ""}
+      </div>`;
+    div.querySelector(".name").onclick = () => zoomTo(t);
+    div.querySelectorAll("button").forEach(b => b.onclick = () => {
+      const a = b.dataset.a;
+      if (a === "toggle") { t.visible = !t.visible; if (t.visible) t.layerGroup.addTo(map); else map.removeLayer(t.layerGroup); renderList(); }
+      if (a === "zoom") zoomTo(t);
+      if (a === "del") { map.removeLayer(t.layerGroup); layers = layers.filter(x => x !== t); renderList(); }
+      if (a === "play") selectForPlayback(t);
+    });
+    box.appendChild(div);
+  });
+  models.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "filecard";
+    div.innerHTML = `<span class="swatch" style="background:#285d43"></span><span class="name">标定跑道模型</span>
+      <div class="stats">绿色虚线 · 双击名称查看参数</div><div class="controls"><button data-a="del">移除</button></div>`;
+    div.querySelector(".name").onclick = () => map.fitBounds(m.getBounds().pad(0.2));
+    div.querySelector("button").onclick = () => { map.removeLayer(m); models = models.filter(x => x !== m); renderList(); };
+    box.appendChild(div);
+  });
+}
+function zoomTo(t) {
+  map.fitBounds(L.latLngBounds(t.coords.map(c => L.latLng(...display(c)))).pad(0.2));
+}
+
+function selectForPlayback(t) {
+  stopPlay();
+  selected = t;
+  document.getElementById("playback").style.display = "block";
+  const sc = document.getElementById("scrubber");
+  sc.max = t.coords.length - 1; sc.value = 0; playIdx = 0;
+  movePlayMarker(0);
+}
+function movePlayMarker(i) {
+  const t = selected; if (!t) return;
+  const ll = display(t.coords[Math.round(i)]);
+  if (playMarker) playMarker.setLatLng(ll);
+  else playMarker = L.circleMarker(ll, { radius: 7, color: "#fff", weight: 2, fillColor: "#f97316", fillOpacity: 1 }).addTo(map);
+  const info = [];
+  if (t.times && t.times.length) info.push("t=" + Math.round((t.times[Math.round(i)] - t.times[0])/1000) + "s");
+  if (t.dists && t.dists.length) info.push("d=" + (t.dists[Math.round(i)]/1000).toFixed(2) + "km");
+  if (t.speeds && t.speeds.length) info.push("v=" + (t.speeds[Math.round(i)]*3.6).toFixed(1) + "km/h");
+  document.getElementById("playinfo").textContent = info.join(" · ");
+  document.getElementById("scrubber").value = i;
+}
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  document.getElementById("playbtn").textContent = "播放";
+}
+document.getElementById("playbtn").onclick = () => {
+  if (playTimer) { stopPlay(); return; }
+  if (!selected) return;
+  const mult = parseFloat(document.getElementById("playspeed").value);
+  const n = selected.coords.length;
+  // 真实采样间隔（CSV 为 2s），回放按倍速推进；未知时间则按 0.5s/点
+  let intervalMs = 500;
+  if (selected.times && selected.times.length > 1) intervalMs = (selected.times[1] - selected.times[0]);
+  const stepPerTick = (mult * 100) / intervalMs / 10; // 每100ms前进的点数
+  document.getElementById("playbtn").textContent = "暂停";
+  playTimer = setInterval(() => {
+    playIdx += stepPerTick;
+    if (playIdx >= n - 1) { playIdx = n - 1; movePlayMarker(playIdx); stopPlay(); return; }
+    movePlayMarker(playIdx);
+  }, 100);
+};
+document.getElementById("scrubber").oninput = e => { stopPlay(); playIdx = parseFloat(e.target.value); movePlayMarker(playIdx); };
+
+document.getElementById("generator-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!apiReady) {
+    setGenerationStatus("本地模拟后端尚未连接。", "error");
+    return;
+  }
+  const button = document.getElementById("generate-btn");
+  const seedValue = document.getElementById("seed").value.trim();
+  const payload = {
+    distance_km: Number(document.getElementById("distance").value),
+    pace_min_per_km: Number(document.getElementById("pace").value),
+    candidates: Number(document.getElementById("candidates").value),
+    seed: seedValue || null,
+    settings: {
+      sample_interval_seconds: Number(document.getElementById("sample-interval").value),
+      gps_sigma_m: Number(document.getElementById("gps-sigma").value),
+      white_noise_sigma_m: Number(document.getElementById("white-noise").value),
+      dropout_probability: Number(document.getElementById("dropout").value)
+    }
+  };
+  button.disabled = true;
+  button.textContent = "正在生成…";
+  setGenerationStatus("正在生成候选并执行物理质量检查…");
+  try {
+    const result = await fetchJson("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    addGeneratedRun(result);
+    setGenerationStatus("生成完成 · seed " + result.seed + " · 已自动显示在地图上", "ok");
+    const history = await fetchJson("/api/runs");
+    renderRunHistory(history.runs || []);
+  } catch (error) {
+    setGenerationStatus("生成失败：" + error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "生成并显示";
+  }
+});
+
+scanServerRuns();
+</script>
+</body>
+</html>

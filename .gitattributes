@@ -1,0 +1,10 @@
+# 换行符：会被直接执行的文件必须按平台来。
+#
+# `git ls-files --eol` 显示这个仓库里 LF / CRLF 是混着的（上游文件多为 LF，
+# 本地新增多为 CRLF）。这里不去统一重排已入库的文本源码——那会把「只改了 1 行」
+# 里真正改了什么淹没成整文件 diff，也会让上游合并变成全文件冲突。只对下面这几类
+# 真正交给 shell / cmd 执行的文件钉死换行，CRLF 的 .sh 在 Linux/macOS 上会
+# 直接 `bad interpreter`。
+*.sh      text eol=lf
+*.command text eol=lf
+*.bat     text eol=crlf
